@@ -1,18 +1,49 @@
 """
 Configuration du projet Django - Portfolio de Lazaki Chelsoube
+Version compatible Render (production) et local (développement).
 """
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- SECURITE -----------------------------------------------------------
-# En production : deplacez cette cle dans une variable d'environnement
-# et mettez DEBUG = False.
-SECRET_KEY = 'django-insecure-CHANGEZ-MOI-avant-la-mise-en-production-lazaki'
+# Render définit automatiquement la variable RENDER=true
+IS_RENDER = bool(os.environ.get('RENDER'))
 
-DEBUG = True
+# --- SECURITE -----------------------------------------------------------
+# En local : DEBUG=True par défaut. Sur Render : DEBUG=False par défaut.
+DEBUG = os.environ.get('DEBUG', 'False' if IS_RENDER else 'True') == 'True'
+
+# Sur Render, définissez SECRET_KEY dans Environment (Dashboard).
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if IS_RENDER and not DEBUG:
+        raise ImproperlyConfigured(
+            "La variable d'environnement SECRET_KEY est obligatoire en production."
+        )
+    SECRET_KEY = 'django-insecure-cle-de-developpement-uniquement'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+
+# Nom d'hôte fourni automatiquement par Render (ex: portfolio-lazaki.onrender.com)
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# Domaine explicite (utile si le nom Render change ou avec un domaine perso)
+ALLOWED_HOSTS.append('portfolio-lazaki.onrender.com')
+
+CSRF_TRUSTED_ORIGINS = ['https://portfolio-lazaki.onrender.com']
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_EXTERNAL_HOSTNAME}')
+
+# Render est derrière un proxy HTTPS
+if IS_RENDER:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # --- APPLICATIONS ---------------------------------------------------------
 INSTALLED_APPS = [
@@ -34,6 +65,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # doit rester tout en haut
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # juste après SecurityMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,14 +95,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # --- BASE DE DONNEES ------------------------------------------------------
-# SQLite par defaut (suffisant pour un portfolio). Pour passer a PostgreSQL
-# plus tard, remplacez simplement ce dictionnaire.
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Si DATABASE_URL est défini (PostgreSQL Render), on l'utilise.
+# Sinon : SQLite (attention, le disque de Render est éphémère :
+# la base SQLite est réinitialisée à chaque redéploiement).
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -89,6 +128,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -104,7 +150,16 @@ REST_FRAMEWORK = {
 }
 
 # --- CORS ------------------------------------------------------------------
-# En developpement on autorise tout, pour que le frontend (Live Server,
-# fichier local, etc.) puisse appeler l'API sans blocage.
-# En production : remplacez par CORS_ALLOWED_ORIGINS = ["https://votre-domaine.com"]
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+# Développement : tout est autorisé.
+# Production : uniquement les origines listées dans la variable
+# d'environnement CORS_ALLOWED_ORIGINS (séparées par des virgules), ex :
+#   https://mon-frontend.onrender.com,https://mondomaine.com
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        o.strip()
+        for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+        if o.strip()
+    ]
