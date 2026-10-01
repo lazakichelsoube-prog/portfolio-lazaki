@@ -95,9 +95,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # --- BASE DE DONNEES ------------------------------------------------------
-# Si DATABASE_URL est défini (PostgreSQL Render), on l'utilise.
-# Sinon : SQLite (attention, le disque de Render est éphémère :
-# la base SQLite est réinitialisée à chaque redéploiement).
 if os.environ.get('DATABASE_URL'):
     import dj_database_url
     DATABASES = {
@@ -150,16 +147,5 @@ REST_FRAMEWORK = {
 }
 
 # --- CORS ------------------------------------------------------------------
-# Développement : tout est autorisé.
-# Production : uniquement les origines listées dans la variable
-# d'environnement CORS_ALLOWED_ORIGINS (séparées par des virgules), ex :
-#   https://mon-frontend.onrender.com,https://mondomaine.com
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOW_ALL_ORIGINS = False
-    CORS_ALLOWED_ORIGINS = [
-        o.strip()
-        for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
-        if o.strip()
-    ]
+# Autorise toutes les origines (API en lecture publique, pas de donnees sensibles).
+CORS_ALLOW_ALL_ORIGINS = True
