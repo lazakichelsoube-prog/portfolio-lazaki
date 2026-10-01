@@ -3,7 +3,9 @@
    Connecte le frontend statique a l'API Django (DRF).
    ========================================================= */
 
-const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE = ["localhost", "127.0.0.1"].includes(location.hostname)
+  ? "http://127.0.0.1:8000/api"
+  : "https://portfolio-lazaki.onrender.com/api";
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("anneeCourante").textContent = new Date().getFullYear();
@@ -219,70 +221,3 @@ async function chargerCollaborations() {
         ${c.temoignage ? `<p>${escapeHtml(c.temoignage)}</p>` : ""}
         ${c.lien ? `<a href="${c.lien}" target="_blank" rel="noopener">Voir le lien →</a>` : ""}
       </div>
-    `).join("");
-  } catch (erreur) {
-    console.warn("Impossible de charger les collaborations :", erreur);
-  }
-}
-
-/* ---------- Formulaire de contact ---------- */
-function initFormulaireContact() {
-  const form = document.getElementById("contactForm");
-  const feedback = document.getElementById("formFeedback");
-  const bouton = document.getElementById("contactSubmit");
-
-  form.addEventListener("submit", async (evenement) => {
-    evenement.preventDefault();
-    feedback.textContent = "";
-    feedback.className = "form-feedback";
-
-    const donnees = {
-      nom: form.nom.value.trim(),
-      email: form.email.value.trim(),
-      sujet: form.sujet.value.trim(),
-      contenu: form.contenu.value.trim(),
-    };
-
-    if (!donnees.nom || !donnees.email || !donnees.contenu) {
-      feedback.textContent = "Merci de remplir tous les champs obligatoires.";
-      feedback.classList.add("error");
-      return;
-    }
-
-    bouton.disabled = true;
-    bouton.textContent = "Envoi en cours…";
-
-    try {
-      const res = await fetch(`${API_BASE}/messages/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(donnees),
-      });
-
-      if (!res.ok) throw new Error("Le serveur a refusé le message.");
-
-      feedback.textContent = "Message envoyé avec succès. Merci, je vous répondrai rapidement !";
-      feedback.classList.add("success");
-      form.reset();
-    } catch (erreur) {
-      feedback.textContent = "L'envoi a échoué. Vérifiez que le serveur Django est bien lancé, ou écrivez-moi directement par email.";
-      feedback.classList.add("error");
-      console.warn(erreur);
-    } finally {
-      bouton.disabled = false;
-      bouton.textContent = "Envoyer le message";
-    }
-  });
-}
-
-/* ---------- Utilitaires ---------- */
-function setTexte(id, valeur) {
-  const el = document.getElementById(id);
-  if (el && valeur) el.textContent = valeur;
-}
-
-function escapeHtml(chaine) {
-  const div = document.createElement("div");
-  div.textContent = chaine ?? "";
-  return div.innerHTML;
-}
