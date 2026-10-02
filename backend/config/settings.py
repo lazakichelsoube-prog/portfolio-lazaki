@@ -54,6 +54,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'cloudinary_storage',
+    'cloudinary',
+
     # Apps tierces
     'rest_framework',
     'corsheaders',
@@ -125,8 +128,20 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Si CLOUDINARY_URL est defini (Render), les images uploadees via l'admin
+# (photo de profil, projets, logos clients) sont stockees sur Cloudinary,
+# car le disque de Render gratuit est efface a chaque redemarrage.
+# En local, sans cette variable, le stockage classique sur disque est utilise.
+USE_CLOUDINARY = bool(os.environ.get('CLOUDINARY_URL'))
+
 STORAGES = {
-    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'default': {
+        'BACKEND': (
+            'cloudinary_storage.storage.MediaCloudinaryStorage'
+            if USE_CLOUDINARY
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
+    },
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
