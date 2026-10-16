@@ -139,7 +139,7 @@ async function chargerCompetences() {
   }
 }
 
-/* ---------- Parcours ---------- */
+/* ---------- Parcours (académique + professionnel) ---------- */
 async function chargerParcours() {
   const conteneur = document.getElementById("parcoursContainer");
   try {
@@ -148,21 +148,34 @@ async function chargerParcours() {
     const data = await res.json();
     const etapes = data.results ?? data;
 
-    if (!etapes.length) {
-      conteneur.innerHTML = '<p class="empty-text">Parcours à venir.</p>';
-      return;
-    }
+    const groupes = [
+      { cle: "academique", titre: "Parcours académique", vide: "Parcours académique à venir." },
+      { cle: "professionnel", titre: "Parcours professionnel", vide: "Parcours professionnel à venir." },
+    ];
 
-    conteneur.innerHTML = etapes.map((e) => `
-      <div class="timeline-item">
-        <div class="timeline-item__dot"></div>
-        <div class="timeline-item__content">
-          <p class="timeline-item__date">${escapeHtml(e.periode)}</p>
-          <h3>${escapeHtml(e.titre)}</h3>
-          <p>${escapeHtml(e.description)}</p>
-        </div>
-      </div>
-    `).join("");
+    conteneur.innerHTML = groupes.map((g) => {
+      const items = etapes.filter((e) => (e.type_parcours || "academique") === g.cle);
+
+      const contenu = items.length
+        ? `<div class="timeline">
+            ${items.map((e) => `
+              <div class="timeline-item">
+                <div class="timeline-item__dot"></div>
+                <div class="timeline-item__content">
+                  <p class="timeline-item__date">${escapeHtml(e.periode)}</p>
+                  <h3>${escapeHtml(e.titre)}</h3>
+                  <p>${escapeHtml(e.description)}</p>
+                </div>
+              </div>`).join("")}
+          </div>`
+        : `<p class="empty-text">${g.vide}</p>`;
+
+      return `
+        <div class="parcours-group">
+          <h3 class="parcours-subtitle">${g.titre}</h3>
+          ${contenu}
+        </div>`;
+    }).join("");
   } catch (erreur) {
     conteneur.innerHTML = '<p class="empty-text">Impossible de charger le parcours pour le moment.</p>';
     console.warn(erreur);

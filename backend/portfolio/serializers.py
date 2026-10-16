@@ -48,4 +48,4 @@ class MessageSerializer(serializers.ModelSerializer):
 class EtapeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Etape
-        fields = ['id', 'periode', 'titre', 'description']
+        fields = ['id', 'type_parcours', 'periode', 'titre', 'description']

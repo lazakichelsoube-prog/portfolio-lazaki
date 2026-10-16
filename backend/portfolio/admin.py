@@ -36,8 +36,9 @@ class ClientAdmin(admin.ModelAdmin):
 
 @admin.register(Etape)
 class EtapeAdmin(admin.ModelAdmin):
-    list_display = ('periode', 'titre', 'ordre')
+    list_display = ('periode', 'titre', 'type_parcours', 'ordre')
     list_editable = ('ordre',)
+    list_filter = ('type_parcours',)
     search_fields = ('titre', 'description')
 
 

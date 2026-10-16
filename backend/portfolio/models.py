@@ -136,7 +136,18 @@ class Message(models.Model):
 
 
 class Etape(models.Model):
-    """Une étape du parcours (formation, apprentissage...) affichée dans la timeline."""
+    """Une étape du parcours (académique ou professionnel) affichée dans la timeline."""
+    TYPE_CHOICES = [
+        ('academique', 'Parcours académique'),
+        ('professionnel', 'Parcours professionnel'),
+    ]
+
+    type_parcours = models.CharField(
+        "Type de parcours",
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default='academique',
+    )
     periode = models.CharField(
         max_length=60,
         help_text="Ex : '2025 — Aujourd'hui', '2024 — 2025', 'En continu'",
