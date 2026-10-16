@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   chargerProfil();
   chargerCompetences();
   chargerParcours();
+  chargerProjets();
   initFormulaireContact();
 });
 
@@ -164,6 +165,40 @@ async function chargerParcours() {
     `).join("");
   } catch (erreur) {
     conteneur.innerHTML = '<p class="empty-text">Impossible de charger le parcours pour le moment.</p>';
+    console.warn(erreur);
+  }
+}
+
+/* ---------- Projets ---------- */
+async function chargerProjets() {
+  const conteneur = document.getElementById("projectsContainer");
+  try {
+    const res = await fetch(`${API_BASE}/projects/`);
+    if (!res.ok) throw new Error("Réponse API invalide");
+    const data = await res.json();
+    const projets = data.results ?? data;
+
+    if (!projets.length) {
+      conteneur.innerHTML = '<p class="empty-text">Aucun projet publié pour le moment — revenez bientôt !</p>';
+      return;
+    }
+
+    conteneur.innerHTML = projets.map((p) => `
+      <article class="project-card">
+        ${p.image ? `<img src="${p.image}" alt="Aperçu du projet ${escapeHtml(p.titre)}">` : ""}
+        <h3>${escapeHtml(p.titre)}</h3>
+        <p>${escapeHtml(p.description)}</p>
+        <div class="tech-tags">
+          ${(p.technologies_list || []).map((t) => `<span class="tech-tag">${escapeHtml(t)}</span>`).join("")}
+        </div>
+        <div class="project-links">
+          ${p.lien_demo ? `<a href="${p.lien_demo}" target="_blank" rel="noopener">Démo</a>` : ""}
+          ${p.lien_code ? `<a href="${p.lien_code}" target="_blank" rel="noopener">Code source</a>` : ""}
+        </div>
+      </article>
+    `).join("");
+  } catch (erreur) {
+    conteneur.innerHTML = '<p class="empty-text">Impossible de charger les réalisations pour le moment.</p>';
     console.warn(erreur);
   }
 }
